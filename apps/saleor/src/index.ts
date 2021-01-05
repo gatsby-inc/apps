@@ -1,4 +1,4 @@
-import { DialogExtensionSDK, FieldExtensionSDK } from 'contentful-ui-extensions-sdk';
+import { DialogExtensionSDK, FieldExtensionSDK } from '@contentful/app-sdk';
 import { setup, renderSkuPicker } from 'shared-sku-app';
 import { dialogConfig, DIALOG_ID, SKUPickerConfig, strings } from './constants';
 

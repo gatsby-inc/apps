@@ -25,7 +25,7 @@
     "@typeform/embed": "^0.16.0",
     "@types/jest": "^25.1.4",
     "@types/lodash": "^4.14.149",
-    "contentful-ui-extensions-sdk": "3.10.11",
+    "@contentful/app-sdk": "3.27.0",
     "core-js": "^3.2.1",
     "emotion": "^10.0.27",
     "jest-environment-jsdom": "^25.1.0",

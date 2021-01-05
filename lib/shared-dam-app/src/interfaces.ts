@@ -1,4 +1,4 @@
-import { FieldExtensionSDK } from 'contentful-ui-extensions-sdk';
+import { FieldExtensionSDK } from '@contentful/app-sdk';
 
 export type Hash = Record<string, any>;
 

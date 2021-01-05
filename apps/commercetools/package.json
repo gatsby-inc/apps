@@ -34,7 +34,7 @@
     "@commercetools/sdk-middleware-http": "^6.0.1",
     "@commercetools/sdk-middleware-queue": "^2.1.1",
     "array-move": "2.1.0",
-    "contentful-ui-extensions-sdk": "^3.10.7",
+    "@contentful/app-sdk": "3.27.0",
     "core-js": "3.1.4",
     "emotion": "^10.0.14",
     "es6-promise": "^4.2.8",

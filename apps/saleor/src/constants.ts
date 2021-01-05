@@ -1,4 +1,4 @@
-import { OpenCustomWidgetOptions } from 'contentful-ui-extensions-sdk';
+import { OpenCustomWidgetOptions } from '@contentful/app-sdk';
 import { Pagination } from 'shared-sku-app';
 import logo from './app-logo.svg';
 

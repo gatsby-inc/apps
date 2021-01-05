@@ -17,7 +17,7 @@
     "@hapi/inert": "^6.0.1",
     "@types/hapi__hapi": "^19.0.3",
     "@types/node-fetch": "^2.5.7",
-    "contentful-ui-extensions-sdk": "^3.14.3",
+    "@contentful/app-sdk": "3.27.0",
     "dotenv": "^8.2.0",
     "hapi": "^18.1.0",
     "node-fetch": "^2.6.0",
