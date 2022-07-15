@@ -10,12 +10,10 @@ import fetchMock from 'fetch-mock';
 import standalone from './standalone';
 
 configure({
-  testIdAttribute: 'data-test-id'
+  testIdAttribute: 'data-test-id',
 });
 
 const originalStorage = window.localStorage;
-const mockDate = 100;
-const realNow = Date.now;
 
 describe('The Jira App Components', () => {
   let mockSdk: any = {};
@@ -26,41 +24,41 @@ describe('The Jira App Components', () => {
     window.open = jest.fn();
     Object.defineProperty(window, 'localStorage', { writable: true, value: originalStorage });
 
-    Date.now = jest.fn().mockReturnValue(mockDate);
+    Date.now = jest.fn(() => 100);
+    Math.random = jest.fn(() => 0.5);
 
     mockSdk = {
       ids: {
         space: 'test-space',
         environment: 'master',
-        user: '123'
+        user: '123',
       },
       app: {
         setReady: jest.fn(),
         isInstalled: jest.fn().mockReturnValue(Promise.resolve(false)),
         getParameters: jest.fn().mockReturnValue(Promise.resolve(null)),
-        onConfigure: jest.fn(fn => {
+        onConfigure: jest.fn((fn) => {
           configureFn = fn;
-        })
+        }),
       },
       space: {
         getContentTypes: jest.fn().mockReturnValue(Promise.resolve(mockContentTypes)),
-        getEditorInterfaces: jest.fn().mockResolvedValue({ items: [] })
+        getEditorInterfaces: jest.fn().mockResolvedValue({ items: [] }),
       },
       notifier: {
-        error: jest.fn()
+        error: jest.fn(),
       },
       window: {
-        startAutoResizer: jest.fn()
+        startAutoResizer: jest.fn(),
       },
       user: {
         firstName: 'David',
-        lastName: 'Fateh'
-      }
+        lastName: 'Fateh',
+      },
     };
   });
 
   afterEach(() => {
-    Date.now = realNow;
     cleanup();
   });
 
@@ -76,8 +74,11 @@ describe('The Jira App Components', () => {
       const oauthButton = wrapper.getByTestId('oauth-button');
       const token = '123';
 
+      const source: MessageEventSource = { close: jest.fn() } as any;
+      (window.open as jest.Mock).mockReturnValue(source);
+
       fireEvent.click(oauthButton);
-      fireEvent(window, new MessageEvent('message', { data: { token } }));
+      fireEvent(window, new MessageEvent('message', { data: { token }, source }));
 
       expect(window.open).toHaveBeenCalledWith(
         'https://auth.atlassian.com/authorize?audience=api.atlassian.com&client_id=XD9k9QU9VT4Rt26u6lbO3NM0fOqvvXan&scope=read%3Ajira-user%20read%3Ajira-work%20write%3Ajira-work&redirect_uri=https%3A%2F%2Fapi.jira.ctfapps.net%2Fauth&response_type=code&state=http%3A%2F%2Flocalhost%2F&prompt=consent',
@@ -95,8 +96,11 @@ describe('The Jira App Components', () => {
       const oauthButton = wrapper.getByTestId('oauth-button');
       const error = '123';
 
+      const source: MessageEventSource = { close: jest.fn() } as any;
+      (window.open as jest.Mock).mockReturnValue(source);
+
       fireEvent.click(oauthButton);
-      fireEvent(window, new MessageEvent('message', { data: { error } }));
+      fireEvent(window, new MessageEvent('message', { data: { error }, source }));
 
       expect(mockSdk.notifier.error).toHaveBeenCalledWith(
         'There was an error authenticating. Please refresh and try again.'
@@ -122,8 +126,8 @@ describe('The Jira App Components', () => {
             }
           }),
           setItem: jest.fn(),
-          removeItem: jest.fn()
-        }
+          removeItem: jest.fn(),
+        },
       });
 
       const wrapper = render(<App sdk={mockSdk} />);
@@ -137,7 +141,9 @@ describe('The Jira App Components', () => {
       });
 
       const instanceSelector = wrapper.getByTestId('instance-selector');
-      const projectSearchInput: HTMLInputElement = wrapper.getByTestId('cf-ui-text-input') as HTMLInputElement;
+      const projectSearchInput: HTMLInputElement = wrapper.getByTestId(
+        'cf-ui-text-input'
+      ) as HTMLInputElement;
 
       // expect instance data to load into the first <select>
       expect(instanceSelector.textContent).toEqual(
@@ -149,14 +155,14 @@ describe('The Jira App Components', () => {
 
       // pick an instance
       fireEvent.change(instanceSelector, {
-        target: { value: '11111111-1111-1111-1111-111111111112' }
+        target: { value: '11111111-1111-1111-1111-111111111112' },
       });
 
       await wait();
 
       // pick the extensibility project
       fireEvent.change(projectSearchInput, {
-        target: { value: 'extensibility' }
+        target: { value: 'extensibility' },
       });
 
       jest.advanceTimersByTime(1000);
@@ -209,8 +215,8 @@ describe('The Jira App Components', () => {
             }
           }),
           setItem: jest.fn(),
-          removeItem: jest.fn()
-        }
+          removeItem: jest.fn(),
+        },
       });
 
       const wrapper = render(<App sdk={mockSdk} />);
@@ -236,7 +242,7 @@ describe('The Jira App Components', () => {
 
       // pick an instance
       fireEvent.change(instanceSelector, {
-        target: { value: '11111111-1111-1111-1111-111111111112' }
+        target: { value: '11111111-1111-1111-1111-111111111112' },
       });
 
       // try to install with no project selected
@@ -284,7 +290,7 @@ describe('The Jira App Components', () => {
         'https://api.atlassian.com/ex/jira/cloud-id/rest/api/2/search?jql=issue.property%5BcontentfulLink%5D.records%20%3D%20%22ctf%3Atest-space%3Amaster%3Aundefined%22',
         { issues: [] },
         {
-          overwriteRoutes: true
+          overwriteRoutes: true,
         }
       );
 
@@ -323,7 +329,7 @@ describe('The Jira App Components', () => {
         'https://api.atlassian.com/ex/jira/cloud-id/rest/api/2/search?jql=issue.property%5BcontentfulLink%5D.records%20%3D%20%22ctf%3Atest-space%3Amaster%3Aundefined%22',
         403,
         {
-          overwriteRoutes: true
+          overwriteRoutes: true,
         }
       );
 
@@ -339,17 +345,17 @@ describe('The Jira App Components', () => {
     it('should handle a successful token and expire time', () => {
       const mockWindow = {
         location: {
-          href: `http://localhost:1234?token=123&expiresIn=10`
+          href: `http://localhost:1234?token=123&expiresIn=10`,
         },
         opener: {
-          postMessage: jest.fn()
+          postMessage: jest.fn(),
         },
         localStorage: {
-          setItem: jest.fn()
+          setItem: jest.fn(),
         },
         history: {
-          replaceState: jest.fn()
-        }
+          replaceState: jest.fn(),
+        },
       };
 
       standalone(mockWindow as any);
@@ -364,17 +370,17 @@ describe('The Jira App Components', () => {
       const errorMessage = 'therewasanerror';
       const mockWindow = {
         location: {
-          href: `http://localhost:1234?token=123&&error=${errorMessage}`
+          href: `http://localhost:1234?token=123&&error=${errorMessage}`,
         },
         opener: {
-          postMessage: jest.fn()
+          postMessage: jest.fn(),
         },
         localStorage: {
-          setItem: jest.fn()
+          setItem: jest.fn(),
         },
         history: {
-          replaceState: jest.fn()
-        }
+          replaceState: jest.fn(),
+        },
       };
 
       standalone(mockWindow as any);
@@ -386,17 +392,17 @@ describe('The Jira App Components', () => {
     it('should handle no query string', () => {
       const mockWindow = {
         location: {
-          href: 'http://localhost:1234'
+          href: 'http://localhost:1234',
         },
         opener: {
-          postMessage: jest.fn()
+          postMessage: jest.fn(),
         },
         localStorage: {
-          setItem: jest.fn()
+          setItem: jest.fn(),
         },
         history: {
-          replaceState: jest.fn()
-        }
+          replaceState: jest.fn(),
+        },
       };
 
       standalone(mockWindow as any);

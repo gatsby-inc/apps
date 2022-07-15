@@ -5,7 +5,7 @@ import productPreviews from '../../__mocks__/productPreviews';
 
 const defaultProps: Props = {
   products: productPreviews,
-  selectProduct: jest.fn()
+  selectProduct: jest.fn(),
 };
 
 const renderComponent = (props: Props) => {
@@ -16,7 +16,7 @@ describe('ProductSelectionList', () => {
   afterEach(cleanup);
 
   it('should render successfully', async () => {
-    const component = renderComponent(defaultProps);
-    expect(component.container).toMatchSnapshot();
+    const { getAllByTestId } = renderComponent(defaultProps);
+    expect(getAllByTestId('product-selection-list-item')).toHaveLength(productPreviews.length);
   });
 });

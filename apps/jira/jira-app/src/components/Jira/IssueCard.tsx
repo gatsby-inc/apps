@@ -1,5 +1,6 @@
 import React from 'react';
 import { TagType } from '@contentful/forma-36-react-components/dist/components/Tag/Tag';
+import { FormattedIssue } from '../../interfaces';
 
 import {
   Card,
@@ -8,7 +9,7 @@ import {
   CardActions,
   DropdownList,
   DropdownListItem,
-  TextLink
+  TextLink,
 } from '@contentful/forma-36-react-components';
 
 const statusColors: { [key: string]: TagType } = {
@@ -17,7 +18,7 @@ const statusColors: { [key: string]: TagType } = {
   yellow: 'warning',
   brown: 'secondary',
   'warm-red': 'negative',
-  'blue-gray': 'muted'
+  'blue-gray': 'muted',
 };
 
 interface Props {
@@ -53,9 +54,13 @@ const IssueCard = ({ issue, onRemoveClick }: Props) => {
           <Tooltip place="right" content={issue.issuetype.name}>
             <img className="type" src={issue.issuetype.iconUrl} alt={issue.issuetype.name} />
           </Tooltip>
-          <Tooltip place="right" content={`${issue.priority.name} priority`}>
-            <img src={issue.priority.iconUrl} alt={issue.priority.name} height={22} />
-          </Tooltip>
+          {
+            issue.priority && (
+              <Tooltip place="right" content={`${issue.priority.name} priority`}>
+                <img src={issue.priority.iconUrl} alt={issue.priority.name} height={22} />
+              </Tooltip>
+            )
+          }
         </div>
         <div className="details">
           <TextLink onClick={openInJira}>

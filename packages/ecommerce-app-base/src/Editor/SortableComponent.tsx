@@ -2,7 +2,7 @@ import * as React from 'react';
 import arrayMove from 'array-move';
 import isEqual from 'lodash/isEqual';
 import difference from 'lodash/difference';
-import { FieldExtensionSDK } from 'contentful-ui-extensions-sdk';
+import { FieldExtensionSDK } from '@contentful/app-sdk';
 import { mapSort } from '../utils';
 import { SortableList } from './SortableList';
 import { ProductPreviewsFn, Product, Config } from '../interfaces';
@@ -14,6 +14,7 @@ interface Props {
   config: Config;
   skus: string[];
   fetchProductPreviews: ProductPreviewsFn;
+  skuType?: string;
 }
 
 interface State {
@@ -22,7 +23,7 @@ interface State {
 
 export class SortableComponent extends React.Component<Props, State> {
   state = {
-    productPreviews: []
+    productPreviews: [],
   };
 
   componentDidMount() {
@@ -40,9 +41,9 @@ export class SortableComponent extends React.Component<Props, State> {
 
   updateProductPreviews = async (shouldRefetch: boolean = true) => {
     try {
-      const { fetchProductPreviews, skus, config } = this.props;
+      const { fetchProductPreviews, skus, config, skuType } = this.props;
       const productPreviewsUnsorted = shouldRefetch
-        ? await fetchProductPreviews(skus, config)
+        ? await fetchProductPreviews(skus, config, skuType)
         : this.state.productPreviews;
       const productPreviews = mapSort(productPreviewsUnsorted, skus, 'sku');
       this.setState({ productPreviews });
@@ -74,6 +75,7 @@ export class SortableComponent extends React.Component<Props, State> {
         productPreviews={this.state.productPreviews}
         deleteFn={this.deleteItem}
         useDragHandle
+        skuType={this.props.skuType}
       />
     );
   }

@@ -1,64 +1,65 @@
 import React from 'react';
-import identity from 'lodash/identity';
 import merge from 'lodash/merge';
 import { fireEvent, configure, render, cleanup } from '@testing-library/react';
 import { Props, SkuPicker } from './SkuPicker';
 import productPreviews from '../__mocks__/productPreviews';
-import { DialogExtensionSDK } from 'contentful-ui-extensions-sdk';
+import { DialogExtensionSDK } from '@contentful/app-sdk';
 
 configure({
-  testIdAttribute: 'data-test-id'
+  testIdAttribute: 'data-test-id',
 });
-
-const defaultProps: Props = {
-  sdk: ({
-    parameters: {
-      installation: {},
-      invocation: {
-        fieldType: 'Symbol',
-        fieldValue: []
-      }
-    },
-    close: jest.fn(),
-    notifier: {
-      success: jest.fn(),
-      error: jest.fn()
-    }
-  } as unknown) as DialogExtensionSDK,
-  fetchProductPreviews: jest.fn(skus =>
-    productPreviews.filter(preview => skus.includes(preview.sku))
-  ) as any,
-  fetchProducts: jest.fn(() => ({
-    pagination: {
-      count: 3,
-      limit: 20,
-      offset: 0,
-      total: 3
-    },
-    products: productPreviews
-  })) as any
-};
 
 const renderComponent = async (props: Props) => {
   const component = render(<SkuPicker {...props} />);
   // wait for data to load and render
   await component.findByText('Dress Twin-Set rose');
-  component.getAllByTestId('image').forEach(img => fireEvent(img, new Event('load')));
+  component.getAllByTestId('image').forEach((img) => fireEvent(img, new Event('load')));
   return component;
 };
 
 jest.mock('react-sortable-hoc', () => ({
-  SortableContainer: identity,
-  SortableElement: identity,
-  SortableHandle: identity
+  SortableContainer: (x: any) => x,
+  SortableElement: (x: any) => x,
+  SortableHandle: (x: any) => x,
 }));
 
 describe('SkuPicker', () => {
+  let defaultProps: Props;
+  beforeEach(() => {
+    defaultProps = {
+      sdk: {
+        parameters: {
+          installation: {},
+          invocation: {
+            fieldType: 'Symbol',
+            fieldValue: [],
+          },
+        },
+        close: jest.fn(),
+        notifier: {
+          success: jest.fn(),
+          error: jest.fn(),
+        },
+      } as unknown as DialogExtensionSDK,
+      fetchProductPreviews: jest.fn((skus) =>
+        productPreviews.filter((preview) => skus.includes(preview.sku))
+      ) as any,
+      fetchProducts: jest.fn(() => ({
+        pagination: {
+          count: 3,
+          limit: 20,
+          offset: 0,
+          total: 3,
+        },
+        products: productPreviews,
+      })) as any,
+    };
+  });
   afterEach(cleanup);
 
   it('should render successfully with no products selected', async () => {
-    const { container } = await renderComponent(defaultProps);
-    expect(container).toMatchSnapshot();
+    const { getByTestId } = await renderComponent(defaultProps);
+    expect(getByTestId('sku-search')).toBeInTheDocument();
   });
 
   describe('when it has infinite scrolling mode pagination', () => {
@@ -67,10 +68,10 @@ describe('SkuPicker', () => {
         ...defaultProps,
         fetchProducts: jest.fn(() => ({
           pagination: {
-            hasNextPage: true
+            hasNextPage: true,
           },
-          products: productPreviews.slice(0, 2)
-        })) as any
+          products: productPreviews.slice(0, 2),
+        })) as any,
       });
       expect(await findByTestId('infinite-scrolling-pagination')).toBeTruthy();
     });
@@ -80,10 +81,10 @@ describe('SkuPicker', () => {
         ...defaultProps,
         fetchProducts: jest.fn(() => ({
           pagination: {
-            hasNextPage: false
+            hasNextPage: false,
           },
-          products: productPreviews.slice(0, 2)
-        })) as any
+          products: productPreviews.slice(0, 2),
+        })) as any,
       });
       expect(queryByTestId('infinite-scrolling-pagination')).toBeNull();
     });
@@ -106,8 +107,8 @@ describe('SkuPicker', () => {
       const { findByTestId } = await renderComponent({
         ...defaultProps,
         sdk: merge({}, defaultProps.sdk, {
-          parameters: { invocation: { fieldType: 'Array' } }
-        })
+          parameters: { invocation: { fieldType: 'Array' } },
+        }),
       });
       const productA = await findByTestId(`product-preview-${productPreviews[1].sku}`);
       const productB = await findByTestId(`product-preview-${productPreviews[2].sku}`);

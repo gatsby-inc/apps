@@ -1,7 +1,7 @@
 import { css } from 'emotion';
 import tokens from '@contentful/forma-36-tokens';
 
-export default {
+const styles = {
   body: css({
     height: 'auto',
     minHeight: '65vh',
@@ -15,7 +15,7 @@ export default {
     borderRadius: '2px'
   }),
   lightText: css({
-    color: tokens.colorTextLight
+    color: tokens.gray600
   }),
   signInButton: css({
     textAlign: 'center',
@@ -28,7 +28,7 @@ export default {
     marginBottom: tokens.spacingL,
     border: 0,
     height: '1px',
-    backgroundColor: tokens.colorElementMid
+    backgroundColor: tokens.gray300
   }),
   background: css({
     display: 'block',
@@ -62,7 +62,7 @@ export default {
     display: 'none'
   }),
   slug: css({
-    color: tokens.colorTextLight,
+    color: tokens.gray600,
     fontSize: tokens.fontSizeS,
     marginBottom: tokens.spacingM
   }),
@@ -94,3 +94,4 @@ export default {
     margin: `${tokens.spacing2Xl} 0 ${tokens.spacing4Xl}`
   })
 };
+export default styles

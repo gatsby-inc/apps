@@ -8,12 +8,12 @@ const handleWorkspaces = require('./workspaces-handler');
 const fetchAccessToken = require('./fetch-access-token');
 
 const deps = {
-  fetch
+  fetch,
 };
 
 const app = express();
 
-const FRONTEND = path.dirname(require.resolve('typeform-frontend'));
+const FRONTEND = path.dirname(require.resolve('@contentful/typeform-frontend'));
 
 app.use('/forms', async (req, res) => {
   const { authorization } = req.headers;

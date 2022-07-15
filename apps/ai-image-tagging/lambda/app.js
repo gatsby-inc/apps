@@ -14,12 +14,12 @@ const documentClient = new AWS.DynamoDB.DocumentClient();
 const deps = {
   fetch,
   rekog,
-  documentClient
+  documentClient,
 };
 
 const app = express();
 
-const FRONTEND = path.dirname(require.resolve('ai-image-tagging-frontend'));
+const FRONTEND = path.dirname(require.resolve('@contentful/ai-image-tagging-frontend'));
 
 app.use('/tags', async (req, res) => {
   const { status, body } = await handle(req.method, req.path, deps);

@@ -1,4 +1,4 @@
-import get from 'lodash.get';
+import get from 'lodash/get';
 
 interface FieldItems {
   type: string;
@@ -21,6 +21,7 @@ interface Control {
   fieldId: string;
   widgetNamespace: string;
   widgetId: string;
+  settings?: Record<string, string>;
 }
 
 export interface EditorInterface {
@@ -31,6 +32,10 @@ export interface EditorInterface {
 export type CompatibleFields = Record<string, Field[]>;
 export type SelectedFields = Record<string, string[] | undefined>;
 
+export interface FieldsSkuTypes {
+  [key: string]: Record<string, string>;
+}
+
 function isCompatibleField(field: Field) {
   const isArray = field.type === 'Array';
   return field.type === 'Symbol' || (isArray && (field.items as FieldItems).type === 'Symbol');
@@ -40,7 +45,7 @@ export function getCompatibleFields(contentTypes: ContentType[]): CompatibleFiel
   return contentTypes.reduce((acc, ct) => {
     return {
       ...acc,
-      [ct.sys.id]: (ct.fields || []).filter(isCompatibleField)
+      [ct.sys.id]: (ct.fields || []).filter(isCompatibleField),
     };
   }, {});
 }
@@ -52,9 +57,9 @@ export function editorInterfacesToSelectedFields(
   return eis.reduce((acc, ei) => {
     const ctId = get(ei, ['sys', 'contentType', 'sys', 'id']);
     const fieldIds = get(ei, ['controls'], [])
-      .filter(control => control.widgetNamespace === 'app' && control.widgetId === appId)
-      .map(control => control.fieldId)
-      .filter(fieldId => typeof fieldId === 'string' && fieldId.length > 0);
+      .filter((control) => control.widgetNamespace === 'app' && control.widgetId === appId)
+      .map((control) => control.fieldId)
+      .filter((fieldId) => typeof fieldId === 'string' && fieldId.length > 0);
 
     if (ctId && fieldIds.length > 0) {
       return { ...acc, [ctId]: fieldIds };
@@ -73,9 +78,9 @@ export function selectedFieldsToTargetState(
       const { id } = ct.sys;
       const fields = selectedFields[id] || [];
       const targetState =
-        fields.length > 0 ? { controls: fields.map(fieldId => ({ fieldId })) } : {};
+        fields.length > 0 ? { controls: fields.map((fieldId) => ({ fieldId })) } : {};
 
       return { ...acc, [id]: targetState };
-    }, {})
+    }, {}),
   };
 }

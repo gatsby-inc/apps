@@ -5,8 +5,8 @@ import {
   locations,
   AppExtensionSDK,
   FieldExtensionSDK,
-  DialogExtensionSDK
-} from 'contentful-ui-extensions-sdk';
+  DialogExtensionSDK,
+} from '@contentful/app-sdk';
 import '@contentful/forma-36-react-components/dist/styles.css';
 import '@contentful/forma-36-fcss/dist/styles.css';
 import Authentication from './Auth';
@@ -18,7 +18,7 @@ import processTokenCallback from './processTokenCallback';
 if (window.location.search.includes('token')) {
   processTokenCallback(window);
 } else {
-  init(sdk => {
+  init((sdk) => {
     if (sdk.location.is(locations.LOCATION_APP_CONFIG)) {
       render(<Authentication sdk={sdk as AppExtensionSDK} />, document.getElementById('root'));
     } else if (sdk.location.is(locations.LOCATION_DIALOG)) {

@@ -1,0 +1,46 @@
+version: 2
+
+updates:
+- package-ecosystem: npm
+  directory: "/"
+  schedule:
+    interval: daily
+    time: "00:00"
+    timezone: UTC
+  open-pull-requests-limit: 15
+  commit-message:
+    prefix: "fix"
+    prefix-development: "chore"
+    include: "scope"
+
+- package-ecosystem: npm
+  directory: "/examples/typescript"
+  schedule:
+    interval: daily
+    time: "00:00"
+    timezone: UTC
+  open-pull-requests-limit: 15
+  commit-message:
+    prefix: "fix"
+    prefix-development: "chore"
+    include: "scope"
+  ignore:
+    - dependency-name: "emotion"
+      versions:
+        - ">=11"
+
+- package-ecosystem: npm
+  directory: "/examples/javascript"
+  schedule:
+    interval: daily
+    time: "00:00"
+    timezone: UTC
+  open-pull-requests-limit: 15
+  commit-message:
+    prefix: "fix"
+    prefix-development: "chore"
+    include: "scope"
+  ignore:
+    - dependency-name: "emotion"
+      versions:
+        - ">=11"

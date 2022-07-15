@@ -1,5 +1,5 @@
 import React, { useEffect, useReducer } from 'react';
-import { FieldExtensionSDK, AppExtensionSDK } from 'contentful-ui-extensions-sdk';
+import { FieldExtensionSDK, AppExtensionSDK } from '@contentful/app-sdk';
 import { Select, Option, TextLink, Note, Tooltip } from '@contentful/forma-36-react-components';
 import { TypeFormResponse, FormOption, InstallationParameters } from '../typings';
 import { TypeformOAuth } from '../Auth/TypeformOAuth';
@@ -7,7 +7,6 @@ import { styles } from './styles';
 // @ts-ignore 2307
 import logo from './typeform-icon.svg';
 import { isUserAuthenticated, getToken, resetLocalStorage } from '../utils';
-
 
 interface Props {
   sdk: FieldExtensionSDK & AppExtensionSDK;
@@ -18,7 +17,7 @@ enum ACTION_TYPES {
   UPDATE_VALUE = 'UPDATE_VALUE',
   UPDATE_TOKEN = 'UPDATE_TOKEN',
   RESET = 'RESET',
-  ERROR = 'ERROR'
+  ERROR = 'ERROR',
 }
 
 const initialState = {
@@ -28,12 +27,12 @@ const initialState = {
     name: '',
     href: '',
     isPublic: true,
-    id: ''
+    id: '',
   } as FormOption,
   hasStaleData: false,
   token: getToken(),
   forms: [] as FormOption[],
-  loading: true
+  loading: true,
 };
 const AUTH_ERROR_CODES = [401, 403];
 
@@ -42,7 +41,7 @@ const isStaleData = (value: string, forms: FormOption[]): boolean => {
     if (forms.length === 0) {
       return true;
     } else {
-      if (forms.find(form => form.href === value)) {
+      if (forms.find((form) => form.href === value)) {
         return false;
       } else {
         return true;
@@ -54,7 +53,7 @@ const isStaleData = (value: string, forms: FormOption[]): boolean => {
 };
 
 const getSelectedForm = (value: string, forms: FormOption[]) => {
-  return forms.find(form => form.href === value) || initialState.selectedForm;
+  return forms.find((form) => form.href === value) || initialState.selectedForm;
 };
 
 export function TypeFormField({ sdk }: Props) {
@@ -78,7 +77,7 @@ export function TypeFormField({ sdk }: Props) {
           loading: false,
           forms,
           error: false,
-          hasStaleData
+          hasStaleData,
         };
       }
       case ACTION_TYPES.UPDATE_VALUE: {
@@ -86,7 +85,7 @@ export function TypeFormField({ sdk }: Props) {
         let selectedForm = initialState.selectedForm;
         if (value) {
           sdk.field.setValue(value);
-          selectedForm = (forms as FormOption[]).find(form => form.href === value)!;
+          selectedForm = (forms as FormOption[]).find((form) => form.href === value)!;
         } else {
           selectedForm = initialState.selectedForm;
           sdk.field.removeValue();
@@ -99,7 +98,7 @@ export function TypeFormField({ sdk }: Props) {
           ...state,
           value: '',
           hasStaleData: false,
-          selectedForm: initialState.selectedForm
+          selectedForm: initialState.selectedForm,
         };
       }
       case ACTION_TYPES.UPDATE_TOKEN: {
@@ -108,7 +107,7 @@ export function TypeFormField({ sdk }: Props) {
           ...state,
           loading: true,
           error: false,
-          token
+          token,
         };
       }
       case ACTION_TYPES.ERROR: {
@@ -124,8 +123,8 @@ export function TypeFormField({ sdk }: Props) {
       try {
         const response = await fetch(`/forms/${selectedWorkspaceId}`, {
           headers: {
-            Authorization: `Bearer ${token}`
-          }
+            Authorization: `Bearer ${token}`,
+          },
         });
 
         if (AUTH_ERROR_CODES.includes(response.status)) {
@@ -138,8 +137,8 @@ export function TypeFormField({ sdk }: Props) {
           dispatch({
             type: ACTION_TYPES.INIT,
             payload: {
-              forms: normalizedForms
-            }
+              forms: normalizedForms,
+            },
           });
         }
       } catch (error) {
@@ -152,7 +151,7 @@ export function TypeFormField({ sdk }: Props) {
     fetchForms();
     // Start auto resizer to adjust field height
     sdk.window.startAutoResizer();
-  }, [token]);
+  }, [token, sdk.window, selectedWorkspaceId]);
 
   const onChange = (event: any) => {
     const value = event.currentTarget.value;
@@ -163,20 +162,20 @@ export function TypeFormField({ sdk }: Props) {
     await sdk.dialogs.openCurrentApp({
       width: 1000,
       parameters: {
-        value
+        value,
       },
       title: 'Form Preview',
       shouldCloseOnEscapePress: true,
-      shouldCloseOnOverlayClick: true
+      shouldCloseOnOverlayClick: true,
     });
   };
 
   const normalizeFormResponse = (typeFormResponse: TypeFormResponse): FormOption[] => {
-    return typeFormResponse.forms.items.map(form => ({
+    return typeFormResponse.forms.items.map((form) => ({
       name: form.title,
       href: form._links.display,
       id: form.id,
-      isPublic: form.settings.is_public
+      isPublic: form.settings.is_public,
     }));
   };
 
@@ -220,12 +219,12 @@ export function TypeFormField({ sdk }: Props) {
   return (
     <React.Fragment>
       <div className={styles.field}>
-        <img src={logo} className={styles.logo} />
+        <img alt="TypeForm Logo" src={logo} className={styles.logo} />
         <Select onChange={onChange} value={value} data-test-id="typeform-select">
           <Option key="" value="">
             {forms.length === 0 ? 'No forms available' : 'Choose a typeform'}
           </Option>
-          {forms.map(form => (
+          {forms.map((form) => (
             <Option key={form.id} value={form.href}>
               {form.name}
             </Option>
@@ -240,7 +239,8 @@ export function TypeFormField({ sdk }: Props) {
             icon="Edit"
             rel="noopener noreferrer"
             className={styles.editButton}
-            disabled={!value}>
+            disabled={!value}
+          >
             Edit
           </TextLink>
           {selectedForm.isPublic ? (
@@ -249,7 +249,8 @@ export function TypeFormField({ sdk }: Props) {
             <Tooltip
               containerElement="span"
               content="You can not preview this typeform because it is private"
-              place="right">
+              place="right"
+            >
               {PreviewButton}
             </Tooltip>
           )}
@@ -258,7 +259,8 @@ export function TypeFormField({ sdk }: Props) {
             target="_blank"
             icon="Entry"
             rel="noopener noreferrer"
-            className={styles.editButton}>
+            className={styles.editButton}
+          >
             Results
           </TextLink>
         </div>

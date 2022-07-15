@@ -1,6 +1,7 @@
 import React from 'react';
 import { TextInput, Card, Tooltip } from '@contentful/forma-36-react-components';
 import JiraClient from '../../jiraClient';
+import { ContentfulEntry, FormattedIssue } from '../../interfaces';
 
 interface Props {
   client: JiraClient;
@@ -20,7 +21,7 @@ export default class Search extends React.Component<Props, State> {
 
     this.state = {
       value: '',
-      issues: []
+      issues: [],
     };
   }
 
@@ -49,7 +50,7 @@ export default class Search extends React.Component<Props, State> {
   clearSearch = () => {
     this.setState({
       value: '',
-      issues: []
+      issues: [],
     });
   };
 
@@ -64,7 +65,7 @@ export default class Search extends React.Component<Props, State> {
     // only show top 4 issues that aren't already linked
     if (issuesToShow.length && this.props.issuesAdded) {
       issuesToShow = issuesToShow
-        .filter(i => {
+        .filter((i) => {
           return !this.props.issuesAdded.includes(i.key);
         })
         .slice(0, 4);
@@ -79,13 +80,14 @@ export default class Search extends React.Component<Props, State> {
           testId="jira-issue-search"
         />
         {issuesToShow.length > 0 &&
-          issuesToShow.map(issue => (
+          issuesToShow.map((issue) => (
             <Card
               key={issue.key}
               padding="none"
               className="search-card"
               testId="search-result-issue"
-              onClick={() => this.addLink(issue)}>
+              onClick={() => this.addLink(issue)}
+            >
               <div>
                 <Tooltip place="bottom" content={`${issue.issuetype.name}: ${issue.key}`}>
                   <img className="type" src={issue.issuetype.iconUrl} alt={issue.issuetype.name} />

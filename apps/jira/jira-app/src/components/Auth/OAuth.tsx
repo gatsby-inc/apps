@@ -10,7 +10,7 @@ interface Props {
 
 export default class OAuth extends React.Component<Props> {
   static defaultProps = {
-    proactiveWarning: false
+    proactiveWarning: false,
   };
 
   executeOauth = () => {
@@ -22,13 +22,17 @@ export default class OAuth extends React.Component<Props> {
       `&redirect_uri=${encodeURIComponent(constants.OAUTH_REDIRECT_URI)}`,
       '&response_type=code',
       `&state=${encodeURIComponent(window.location.href)}`,
-      '&prompt=consent'
+      '&prompt=consent',
     ].join('');
 
     const oauthWindow = window.open(url, 'Jira Contentful', 'left=150,top=10,width=800,height=900');
 
-    window.addEventListener('message', ({ data }) => {
-      const { token, error } = data;
+    window.addEventListener('message', (e) => {
+      if (e.source !== oauthWindow) {
+        return;
+      }
+
+      const { token, error } = e.data;
 
       if (error) {
         this.props.notifyError('There was an error authenticating. Please refresh and try again.');

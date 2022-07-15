@@ -3,6 +3,7 @@ import React from 'react';
 import OAuth from './OAuth';
 import JiraClient from '../../jiraClient';
 import { Typography, Heading, Paragraph } from '@contentful/forma-36-react-components';
+import { InstallationParameters } from '../../interfaces';
 
 /** Gets the expireTime from local storage to determine if the token is expired */
 function tokenIsExpired() {
@@ -43,7 +44,7 @@ export default class AuthWrapper extends React.Component<Props, State> {
   private expirationWatchInterval: NodeJS.Timeout | undefined;
 
   static defaultProps = {
-    mode: 'full'
+    mode: 'full',
   };
 
   constructor(props: Props) {
@@ -58,7 +59,7 @@ export default class AuthWrapper extends React.Component<Props, State> {
         token && params
           ? this.initClient(token, params.projectId, params.resourceId, params.resourceUrl)
           : null,
-      expiresSoon: false
+      expiresSoon: false,
     };
   }
 
@@ -82,7 +83,7 @@ export default class AuthWrapper extends React.Component<Props, State> {
           parameters.projectId,
           parameters.resourceId,
           parameters.resourceUrl
-        )
+        ),
       });
 
       return;

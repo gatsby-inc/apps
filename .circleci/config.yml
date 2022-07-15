@@ -1,5 +1,8 @@
 version: 2.1
 
+orbs:
+  node: circleci/node@5.0.2
+
 commands:
   publish:
     steps:
@@ -17,17 +20,17 @@ commands:
   deploy:
     steps:
       - run:
-          name: Install pip
-          command: sudo apt-get install python-pip python-dev
-      - run:
           name: Install awscli
-          command: sudo pip install awscli
+          command: |
+            sudo apt-get update
+            sudo apt-get install python3-pip python3-dev
+            sudo pip3 install awscli
       - run:
           name: Deploy apps to test
           command: |
             STATIC_S3_BASE="s3://cf-apps-static-dev/apps-test-$CIRCLE_SHA1" \
                 STATIC_JIRA_S3_BASE="s3://cf-apps-static-dev/apps-test-$CIRCLE_SHA1/jira" \
-                STAGE='test' npm run deploy
+                STAGE='test' npm run deploy:test
       - run:
           name: Deploy apps to prod
           command: |
@@ -36,11 +39,13 @@ commands:
                 STAGE='prd' npm run deploy
 
 jobs:
-  all:
+  apps:
     docker:
-      - image: circleci/node:12-stretch
+      - image: cimg/base:stable
+    resource_class: medium+
     steps:
       - checkout
+      - node/install
       - run:
           name: Install dependencies
           command: |
@@ -64,8 +69,42 @@ jobs:
       - publish
       - deploy
 
+  test-ts-example:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - checkout
+      - node/install
+      - run:
+          name: Install dependencies
+          command: cd examples/typescript && npm i
+      - run:
+          name: Build
+          command: cd examples/typescript && npm run build
+      - run:
+          name: Test
+          command: cd examples/typescript && npm run test
+
+  test-js-example:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - checkout
+      - node/install
+      - run:
+          name: Install dependencies
+          command: cd examples/javascript && npm i
+      - run:
+          name: Build
+          command: cd examples/javascript && npm run build
+      - run:
+          name: Test
+          command: cd examples/javascript && npm run test
+
 workflows:
   version: 2
   test-deploy:
     jobs:
-      - all
+      - apps
+      - test-ts-example
+      - test-js-example

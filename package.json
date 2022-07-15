@@ -1,16 +1,30 @@
 {
-  "name": "apps",
+  "name": "@contentful/apps",
   "private": true,
+  "devDependencies": {
+    "prettier": "2.7.1",
+    "husky": "^8.0.0",
+    "lint-staged": "^13.0.0"
+  },
   "scripts": {
     "bootstrap": "lerna bootstrap --no-ci",
-    "bootstrap:ci": "lerna bootstrap --ci --concurrency=2",
-    "lint": "lerna run lint --concurrency=2",
-    "build": "lerna run build --concurrency=1",
-    "test": "lerna run test:ci --concurrency=2",
-    "deploy": "lerna run deploy --concurrency=2",
-    "publish-packages": "lerna version --conventional-commits --create-release github --yes && lerna publish from-git --yes"
+    "bootstrap:ci": "lerna bootstrap --ci --concurrency=3",
+    "clean": "lerna clean",
+    "lint": "lerna run lint --concurrency=3",
+    "build": "lerna run build --concurrency=1 --stream",
+    "test": "lerna run test:ci --concurrency=1 --stream",
+    "deploy": "lerna run deploy --concurrency=3",
+    "deploy:test": "lerna run deploy:test --concurrency=3",
+    "publish-packages": "lerna version --conventional-commits --create-release github --yes && lerna publish from-git --yes",
+    "prettier": "prettier --no-editorconfig --no-error-on-unmatched-pattern --write {apps,packages,examples}/**/*.{js,jsx,ts,tsx}",
+    "prepare": "husky install"
   },
   "dependencies": {
-    "lerna": "^3.20.2"
+    "lerna": "5.1.8"
+  },
+  "lint-staged": {
+    "*.{t,j}s?(x)": [
+      "prettier --write"
+    ]
   }
 }

@@ -1,11 +1,7 @@
 /* global global */
 import { render } from 'react-dom';
 
-const mockGetElementById = jest.fn(id => id);
-const mockFetch = jest.fn(() => Promise.resolve());
-
-global.window.fetch = mockFetch;
-global.window.document.getElementById = mockGetElementById;
+jest.mock('react-dom');
 
 function loadEntryPoint() {
   jest.isolateModules(() => {
@@ -17,51 +13,70 @@ jest.mock('react-dom');
 
 const mockSdk = {
   location: {
-    is: val => val === 'entry-sidebar'
+    is: (val) => val === 'entry-sidebar',
   },
   parameters: {
     installation: {
       previewUrl: 'https://preview.com',
       webhookUrl: 'https://webhook.com',
-      authToken: 'test-token'
-    }
+      authToken: 'test-token',
+    },
   },
   entry: {
-    onSysChanged: jest.fn(),
+    onSysChanged: jest.fn(() => ({
+      id: '123',
+      space: {
+        sys: {
+          id: '456',
+        },
+      },
+      updatedAt: '2390-08-23T15:27:27.861Z',
+    })),
     fields: {
       slug: {
-        getValue: jest.fn(() => 'preview-slug')
-      }
-    }
+        getValue: jest.fn(() => 'preview-slug'),
+      },
+    },
   },
   window: {
-    startAutoResizer: jest.fn()
+    startAutoResizer: jest.fn(),
   },
   notifier: {
     success: jest.fn(),
-    error: jest.fn()
-  }
+    error: jest.fn(),
+  },
 };
 
 function doSdkMock() {
-  jest.doMock('contentful-ui-extensions-sdk', () => {
+  jest.doMock('@contentful/app-sdk', () => {
     return {
       __esModule: true,
-      init: jest.fn(fn => fn(mockSdk)),
+      init: jest.fn((fn) => fn(mockSdk)),
       locations: {
-        LOCATION_ENTRY_SIDEBAR: 'entry-sidebar'
-      }
+        LOCATION_ENTRY_SIDEBAR: 'entry-sidebar',
+      },
     };
   });
 }
 
+let fetchSpy;
+let getElementByIdSpy;
 describe('Gatsby Preview entry point', () => {
   beforeEach(() => {
+    fetchSpy = jest.spyOn(window, 'fetch');
+    fetchSpy.mockImplementation(() => Promise.resolve());
+
+    getElementByIdSpy = jest.spyOn(document, 'getElementById');
+    getElementByIdSpy.mockImplementation((id) => id);
+
     doSdkMock();
   });
+
   afterEach(() => {
+    fetchSpy.mockRestore();
+    getElementByIdSpy.mockRestore();
     render.mockClear();
-    jest.unmock('contentful-ui-extensions-sdk');
+    jest.unmock('@contentful/app-sdk');
   });
 
   it('should initialize the app', () => {

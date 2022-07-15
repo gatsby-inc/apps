@@ -19,28 +19,37 @@ function makeCTA(fieldType) {
 
 function validateParameters(parameters) {
   if (parameters.clientId.length < 1) {
-    return 'Provide your Commerce Layer client ID.';
+    return 'Provide your Sales Channel client ID.';
   }
 
-  if (parameters.apiEndpoint.length < 1) {
-    return 'Provide the Commerce Layer API endpoint.';
+  if (parameters.apiEndpoint.length < 1 || !parameters.apiEndpoint.startsWith('https://')) {
+    return 'Provide a valid Sales Channel API endpoint.';
+  }
+
+  if (
+    parameters.scope.length > 1 &&
+    !parameters.scope.startsWith('market:') &&
+    !parameters.scope.startsWith('stock_location:')
+  ) {
+    return 'Provide a valid Sales Channel scope. Please ask your admin to update configuration.';
   }
 
   return null;
 }
 
-async function getAccessToken(clientId, endpoint) {
+async function getAccessToken(clientId, endpoint, scope) {
   if (!accessToken) {
     /* eslint-disable-next-line require-atomic-updates */
     accessToken = (
       await CLayerAuth.getIntegrationToken({
         clientId,
-        endpoint,
+        endpoint: endpoint.startsWith('https://') ? endpoint : `https://${endpoint}`,
         // The empty client secret is needed for legacy reasons, as the
         // CLayerAuth SDK will throw if not present. By setting to empty
         // string we prevent the SDK exception and the value is ignored
         // by the Commerce Layer Auth API.
-        clientSecret: ''
+        clientSecret: '',
+        scope,
       })
     ).accessToken;
   }
@@ -61,19 +70,19 @@ async function fetchSKUs(installationParams, search, pagination) {
     throw new Error(validationError);
   }
 
-  const { clientId, apiEndpoint } = installationParams;
-  const accessToken = await getAccessToken(clientId, apiEndpoint);
+  const { clientId, apiEndpoint, scope } = installationParams;
+  const accessToken = await getAccessToken(clientId, apiEndpoint, scope);
 
-  const URL = `${apiEndpoint}/api/skus?page[size]=${PER_PAGE}&page[number]=${pagination.offset /
-    PER_PAGE +
-    1}${search.length ? `&filter[q][name_or_code_cont]=${search}` : ''}`;
+  const URL = `${apiEndpoint}/api/skus?page[size]=${PER_PAGE}&page[number]=${
+    pagination.offset / PER_PAGE + 1
+  }${search.length ? `&filter[q][name_or_code_cont]=${search}` : ''}`;
 
   const res = await fetch(URL, {
     headers: {
       Accept: 'application/vnd.api+json',
-      Authorization: `Bearer ${accessToken}`
+      Authorization: `Bearer ${accessToken}`,
     },
-    method: 'GET'
+    method: 'GET',
   });
 
   return await res.json();
@@ -89,21 +98,21 @@ const fetchProductPreviews = async function fetchProductPreviews(skus, config) {
 
   const PREVIEWS_PER_PAGE = 25;
 
-  const { clientId, apiEndpoint } = config;
-  const accessToken = await getAccessToken(clientId, apiEndpoint);
+  const { clientId, apiEndpoint, scope } = config;
+  const accessToken = await getAccessToken(clientId, apiEndpoint, scope);
 
   // Commerce Layer's API automatically paginated results for collection endpoints.
   // Here we account for the edge case where the user has picked more than 25
   // products, which is the max amount of pagination results. We need to fetch
   // and compile the complete selection result doing 1 request per 25 items.
-  const resultPromises = chunk(skus, PREVIEWS_PER_PAGE).map(async skusSubset => {
+  const resultPromises = chunk(skus, PREVIEWS_PER_PAGE).map(async (skusSubset) => {
     const URL = `${apiEndpoint}/api/skus?page[size]=${PREVIEWS_PER_PAGE}&filter[q][code_in]=${skusSubset}`;
     const res = await fetch(URL, {
       headers: {
         Accept: 'application/vnd.api+json',
-        Authorization: `Bearer ${accessToken}`
+        Authorization: `Bearer ${accessToken}`,
       },
-      method: 'GET'
+      method: 'GET',
     });
     return await res.json();
   });
@@ -116,8 +125,8 @@ const fetchProductPreviews = async function fetchProductPreviews(skus, config) {
 
   const missingProducts = difference(
     skus,
-    foundProducts.map(product => product.sku)
-  ).map(sku => ({ sku, isMissing: true, image: '', name: '', id: '' }));
+    foundProducts.map((product) => product.sku)
+  ).map((sku) => ({ sku, isMissing: true, image: '', name: '', id: '' }));
 
   return [...foundProducts, ...missingProducts];
 };
@@ -138,11 +147,11 @@ async function renderDialog(sdk) {
           count: PER_PAGE,
           limit: PER_PAGE,
           total: result.meta.record_count,
-          offset: pagination.offset
+          offset: pagination.offset,
         },
-        products: result.data.map(dataTransformer(sdk.parameters.installation.apiEndpoint))
+        products: result.data.map(dataTransformer(sdk.parameters.installation.apiEndpoint)),
       };
-    }
+    },
   });
 
   sdk.window.startAutoResizer();
@@ -156,7 +165,7 @@ async function openDialog(sdk, currentValue, config) {
     shouldCloseOnOverlayClick: true,
     shouldCloseOnEscapePress: true,
     parameters: config,
-    width: 1400
+    width: 1400,
   });
 
   return Array.isArray(skus) ? skus : [];
@@ -178,21 +187,28 @@ setup({
     {
       id: 'clientId',
       name: 'Client ID',
-      description: 'The client ID',
+      description: 'The client ID of your Sales Channel.',
       type: 'Symbol',
-      required: true
+      required: true,
     },
     {
       id: 'apiEndpoint',
       name: 'API Endpoint',
-      description: 'The Commerce Layer API endpoint',
+      description: 'Sales Channel API endpoint (e.g., "https://acme.commercelayer.io")',
       type: 'Symbol',
-      required: true
-    }
+      required: true,
+    },
+    {
+      id: 'scope',
+      name: 'Scope',
+      description: 'Allowed scope for Sales Channel (e.g., "market:1234")',
+      type: 'Symbol',
+      required: false,
+    },
   ],
   fetchProductPreviews,
   renderDialog,
   openDialog,
   isDisabled,
-  validateParameters
+  validateParameters,
 });

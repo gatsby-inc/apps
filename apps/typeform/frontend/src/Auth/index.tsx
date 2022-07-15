@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import React, { useState, useEffect } from 'react';
 import { TypeformOAuth } from './TypeformOAuth';
-import { AppExtensionSDK } from 'contentful-ui-extensions-sdk';
+import { AppExtensionSDK } from '@contentful/app-sdk';
 import { AppConfig } from '../AppConfig';
 import { styles } from '../AppConfig/styles';
 // @ts-ignore 2307
@@ -14,34 +14,34 @@ interface Props {
 }
 
 export default function AuthWrapper({ sdk }: Props) {
-  let expirationWatchInterval: NodeJS.Timeout | undefined;
+  let expirationWatchInterval = React.useRef<NodeJS.Timeout | undefined>(undefined);
   const [token, setToken] = useState(getToken());
   const [expireSoon, setExpireSoon] = useState(false);
 
   useEffect(() => {
+    const refreshToken = () => {
+      if (tokenIsExpired()) {
+        resetLocalStorage();
+      } else if (tokenWillExpireSoon()) {
+        setExpireSoon(true);
+      }
+    };
+
+    const clearExpirationInterval = () => {
+      if (expirationWatchInterval.current) {
+        clearInterval(expirationWatchInterval.current);
+      }
+    };
+
+    const watchForExpiration = () => {
+      clearExpirationInterval();
+      expirationWatchInterval.current = setInterval(refreshToken, 5000);
+    };
+
     watchForExpiration();
     refreshToken();
     return () => clearExpirationInterval();
   }, []);
-
-  const refreshToken = () => {
-    if (tokenIsExpired()) {
-      resetLocalStorage();
-    } else if (tokenWillExpireSoon()) {
-      setExpireSoon(true);
-    }
-  };
-
-  const clearExpirationInterval = () => {
-    if (expirationWatchInterval) {
-      clearInterval(expirationWatchInterval);
-    }
-  };
-
-  const watchForExpiration = () => {
-    clearExpirationInterval();
-    expirationWatchInterval = setInterval(refreshToken, 5000);
-  };
 
   if (token) {
     return <AppConfig sdk={sdk} expireSoon={expireSoon} />;
@@ -59,7 +59,8 @@ export default function AuthWrapper({ sdk }: Props) {
                     <TextLink
                       href="https://www.typeform.com/"
                       target="_blank"
-                      rel="noopener noreferrer">
+                      rel="noopener noreferrer"
+                    >
                       Typeform
                     </TextLink>{' '}
                     app allows you to reference your forms from Typeform without leaving Contentful.

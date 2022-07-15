@@ -1,9 +1,10 @@
-import * as React from 'react';
-import { SortableContainer, SortableElement, SortableHandle } from 'react-sortable-hoc';
+import { Card, IconButton } from '@contentful/f36-components';
+import { CloseIcon } from '@contentful/f36-icons';
 import { css } from 'emotion';
 import arrayMove from 'array-move';
-import { IconButton, Card } from '@contentful/forma-36-react-components';
-import { ThumbnailFn, DeleteFn, Asset, Config } from '../interfaces';
+import * as React from 'react';
+import { SortableContainer, SortableElement, SortableHandle } from 'react-sortable-hoc';
+import { Asset, Config, DeleteFn, ThumbnailFn } from '../interfaces';
 
 interface Props {
   disabled: boolean;
@@ -37,33 +38,34 @@ const DragHandle = SortableHandle<DragHandleProps>(({ url, alt }: DragHandleProp
 
 const styles = {
   container: css({
-    maxWidth: '600px'
+    maxWidth: '600px',
   }),
   grid: css({
     display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)'
+    gap: '20px',
+    gridTemplateColumns: 'repeat(3, 1fr)',
   }),
   card: (disabled: boolean) =>
     css({
       margin: '10px',
       position: 'relative',
-      width: '150px',
-      height: '100px',
-      '> img': {
+      img: {
         cursor: disabled ? 'move' : 'pointer',
         display: 'block',
         maxWidth: '150px',
         maxHeight: '100px',
         margin: 'auto',
-        userSelect: 'none' // Image selection sometimes makes drag and drop ugly.
-      }
+        userSelect: 'none', // Image selection sometimes makes drag and drop ugly.
+      },
     }),
   remove: css({
     position: 'absolute',
     top: '-10px',
     right: '-10px',
-    backgroundColor: 'white'
-  })
+    backgroundColor: 'white',
+    padding: 0,
+    minHeight: 'initial',
+  }),
 };
 
 const SortableItem = SortableElement<SortableElementProps>((props: SortableElementProps) => {
@@ -72,11 +74,11 @@ const SortableItem = SortableElement<SortableElementProps>((props: SortableEleme
       <DragHandle url={props.url} alt={props.alt} />
       {!props.disabled && (
         <IconButton
-          label="Close"
+          variant="transparent"
+          icon={<CloseIcon variant="muted" />}
+          aria-label="Close"
           onClick={props.onDelete}
           className={styles.remove}
-          iconProps={{ icon: 'Close' }}
-          buttonType="muted"
         />
       )}
     </Card>
@@ -103,7 +105,7 @@ const SortableList = SortableContainer<SortableContainerProps>((props: SortableC
 
       return {
         counts,
-        list: [...acc.list, item]
+        list: [...acc.list, item],
       };
     },
     { counts: {}, list: [] }

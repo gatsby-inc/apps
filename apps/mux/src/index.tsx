@@ -1,29 +1,19 @@
 import * as React from 'react';
 import { render } from 'react-dom';
-import {
-  Note,
-  Paragraph,
-  Spinner,
-  Button,
-  TextLink,
-} from '@contentful/forma-36-react-components';
-import {
-  init,
-  locations,
-  AppExtensionSDK,
-  FieldExtensionSDK,
-} from 'contentful-ui-extensions-sdk';
+import { Note, Paragraph, Spinner, Button, TextLink } from '@contentful/forma-36-react-components';
+import { init, locations, AppExtensionSDK, FieldExtensionSDK } from '@contentful/app-sdk';
 import { createUpload } from '@mux/upchunk';
+import MuxPlayer from '@mux/mux-player-react';
 import '@contentful/forma-36-react-components/dist/styles.css';
 import './index.css';
 
 import Config from './config';
-import Player from './player';
 import DeleteButton from './deleteButton';
 import ApiClient from './apiClient';
 import {
-  createSignedPlaybackUrl,
-  createSignedThumbnailUrl,
+  createSignedPlaybackToken,
+  createSignedThumbnailToken,
+  createSignedStoryboardToken,
 } from './signingTokens';
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -34,6 +24,7 @@ interface InstallationParams {
   muxEnableSignedUrls: boolean;
   muxSigningKeyId?: string;
   muxSigningKeyPrivate?: string;
+  muxDomain?: string;
 }
 
 interface AppProps {
@@ -41,6 +32,7 @@ interface AppProps {
 }
 
 interface MuxContentfulObject {
+  version: number;
   uploadId: string;
   assetId: string;
   playbackId?: string;
@@ -48,6 +40,10 @@ interface MuxContentfulObject {
   ready: boolean;
   ratio: string;
   error: string;
+  max_stored_resolution: string;
+  max_stored_frame_rate: number;
+  audioOnly: boolean;
+  duration: number;
 }
 
 interface AppState {
@@ -56,8 +52,9 @@ interface AppState {
   error: string | false;
   errorShowResetAction: boolean | false;
   isDeleting: boolean | false;
-  playbackUrl?: string;
-  posterUrl?: string;
+  playbackToken?: string;
+  posterToken?: string;
+  storyboardToken?: string;
 }
 
 export class App extends React.Component<AppProps, AppState> {
@@ -84,15 +81,12 @@ export class App extends React.Component<AppProps, AppState> {
 
   checkForValidAsset = async () => {
     if (!(this.state.value && this.state.value.assetId)) return false;
-    const res = await this.apiClient.get(
-      `/video/v1/assets/${this.state.value.assetId}`
-    );
+    const res = await this.apiClient.get(`/video/v1/assets/${this.state.value.assetId}`);
     if (res.status === 400) {
       const json = await res.json();
       if (json.error.messages[0].match(/mismatching environment/)) {
         this.setState({
-          error:
-            'Error: it looks like your api keys are for the wrong environment',
+          error: 'Error: it looks like your api keys are for the wrong environment',
         });
         return false;
       }
@@ -118,9 +112,7 @@ export class App extends React.Component<AppProps, AppState> {
     this.props.sdk.window.startAutoResizer();
 
     // Handler for external field value changes (e.g. when multiple authors are working on the same entry).
-    this.detachExternalChangeHandler = this.props.sdk.field.onValueChanged(
-      this.onExternalChange
-    );
+    this.detachExternalChangeHandler = this.props.sdk.field.onValueChanged(this.onExternalChange);
 
     if (this.state.error) return;
 
@@ -134,12 +126,9 @@ export class App extends React.Component<AppProps, AppState> {
       }
 
       if (this.state.value.ready) {
-        const isValid = await this.checkForValidAsset();
-        if (this.state.value.playbackId) {
-          this.setPublicPlayback(this.state.value.playbackId);
-        }
+        await this.checkForValidAsset();
         if (this.state.value.signedPlaybackId) {
-          await this.setSignedPlayback(this.state.value.signedPlaybackId);
+          this.setSignedPlayback(this.state.value.signedPlaybackId);
         }
         return;
       }
@@ -162,26 +151,19 @@ export class App extends React.Component<AppProps, AppState> {
   };
 
   isUsingSigned = () => {
-    return (
-      this.state.value &&
-      !this.state.value.playbackId &&
-      this.state.value.signedPlaybackId
-    );
+    return this.state.value && !this.state.value.playbackId && this.state.value.signedPlaybackId;
   };
 
   requestDeleteAsset = async () => {
     if (!this.state.value || !this.state.value.assetId) {
-      throw Error(
-        'Something went wrong, we cannot delete an asset without an assetId.'
-      );
+      throw Error('Something went wrong, we cannot delete an asset without an assetId.');
     }
 
     const result = await this.props.sdk.dialogs.openConfirm({
-      title: 'Are you sure you want to delete this asset?',
-      message:
-        'This will remove the asset in Mux and in Contentful. There is no way to recover your video, make sure you have a backup if you think you may want to use it again.',
+      title: 'Are you sure you want to remove this asset?',
+      message: 'This will remove the asset in Contentful, but remain in Mux.',
       intent: 'negative',
-      confirmLabel: 'Yes, delete this asset',
+      confirmLabel: 'Yes, remove',
       cancelLabel: 'Cancel',
     });
 
@@ -191,9 +173,7 @@ export class App extends React.Component<AppProps, AppState> {
     }
     this.setState({ isDeleting: true });
 
-    const res = await this.apiClient.get(
-      `/video/v1/assets/${this.state.value.assetId}`
-    );
+    const res = await this.apiClient.get(`/video/v1/assets/${this.state.value.assetId}`);
 
     if (res.status === 401) {
       throw Error(
@@ -206,15 +186,7 @@ export class App extends React.Component<AppProps, AppState> {
   };
 
   resetField = async () => {
-    await this.props.sdk.field.setValue({
-      uploadId: undefined,
-      assetId: undefined,
-      playbackId: undefined,
-      signedPlaybackId: undefined,
-      ready: undefined,
-      ratio: undefined,
-      error: undefined,
-    });
+    await this.props.sdk.field.setValue(undefined);
     this.setState({ error: false, errorShowResetAction: false });
   };
 
@@ -227,8 +199,8 @@ export class App extends React.Component<AppProps, AppState> {
         cors_origin: window.location.origin,
         new_asset_settings: {
           passthrough: passthroughId,
-          playback_policy: (this.props.sdk.parameters
-            .installation as InstallationParams).muxEnableSignedUrls
+          playback_policy: (this.props.sdk.parameters.installation as InstallationParams)
+            .muxEnableSignedUrls
             ? 'signed'
             : 'public',
         },
@@ -250,6 +222,18 @@ export class App extends React.Component<AppProps, AppState> {
     return muxUpload.url;
   };
 
+  getChunkSize = () => {
+    const chunkSize = 1024 * 100; // 100mb chunks default.
+    const connection = navigator.connection;
+    if (!connection) return chunkSize;
+    if (
+      ('effectiveType' in connection && connection.effectiveType === '4g') ||
+      ('rtt' in connection && connection.rtt < 100)
+    ) {
+      return 1024 * 500; // 500mb.
+    }
+  };
+
   onChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.currentTarget.files && e.currentTarget.files[0];
     this.setState({ uploadProgress: 1 });
@@ -264,7 +248,7 @@ export class App extends React.Component<AppProps, AppState> {
       const upload = createUpload({
         file,
         endpoint,
-        chunkSize: 5120, // Uploads the file in ~5mb chunks
+        chunkSize: this.getChunkSize(),
       });
 
       upload.on('error', this.onUploadError);
@@ -297,14 +281,10 @@ export class App extends React.Component<AppProps, AppState> {
 
   pollForUploadDetails = async () => {
     if (!this.state.value || !this.state.value.uploadId) {
-      throw Error(
-        'Something went wrong, because by this point we require an upload ID.'
-      );
+      throw Error('Something went wrong, because by this point we require an upload ID.');
     }
 
-    const res = await this.apiClient.get(
-      `/video/v1/uploads/${this.state.value.uploadId}`
-    );
+    const res = await this.apiClient.get(`/video/v1/uploads/${this.state.value.uploadId}`);
     const { data: muxUpload } = await res.json();
 
     if (muxUpload && muxUpload['asset_id']) {
@@ -320,13 +300,6 @@ export class App extends React.Component<AppProps, AppState> {
     }
   };
 
-  setPublicPlayback = (playbackId: string) => {
-    this.setState({
-      playbackUrl: `https://stream.mux.com/${playbackId}.m3u8`,
-      posterUrl: `https://image.mux.com/${playbackId}/thumbnail.jpg`,
-    });
-  };
-
   setSignedPlayback = async (signedPlaybackId: string) => {
     const { muxSigningKeyId, muxSigningKeyPrivate } = this.props.sdk.parameters
       .installation as InstallationParams;
@@ -339,12 +312,17 @@ export class App extends React.Component<AppProps, AppState> {
       return;
     }
     this.setState({
-      playbackUrl: createSignedPlaybackUrl(
+      playbackToken: createSignedPlaybackToken(
         signedPlaybackId,
         muxSigningKeyId!,
         muxSigningKeyPrivate!
       ),
-      posterUrl: createSignedThumbnailUrl(
+      posterToken: createSignedThumbnailToken(
+        signedPlaybackId,
+        muxSigningKeyId!,
+        muxSigningKeyPrivate!
+      ),
+      storyboardToken: createSignedStoryboardToken(
         signedPlaybackId,
         muxSigningKeyId!,
         muxSigningKeyPrivate!
@@ -354,14 +332,10 @@ export class App extends React.Component<AppProps, AppState> {
 
   getAsset = async () => {
     if (!this.state.value || !this.state.value.assetId) {
-      throw Error(
-        'Something went wrong, we cannot getAsset without an assetId.'
-      );
+      throw Error('Something went wrong, we cannot getAsset without an assetId.');
     }
 
-    const res = await this.apiClient.get(
-      `/video/v1/assets/${this.state.value.assetId}`
-    );
+    const res = await this.apiClient.get(`/video/v1/assets/${this.state.value.assetId}`);
     const { data: asset } = await res.json();
 
     return asset;
@@ -369,17 +343,14 @@ export class App extends React.Component<AppProps, AppState> {
 
   pollForAssetDetails = async () => {
     if (!this.state.value || !this.state.value.assetId) {
-      throw Error(
-        'Something went wrong, because by this point we require an assetId.'
-      );
+      throw Error('Something went wrong, because by this point we require an assetId.');
     }
 
     const asset = await this.getAsset();
     let assetError;
     if (asset.status === 'errored') {
       assetError =
-        (asset.errors && asset.errors.messages && asset.errors.messages[0]) ||
-        'Unknown error';
+        (asset.errors && asset.errors.messages && asset.errors.messages[0]) || 'Unknown error';
     }
 
     if (!asset) {
@@ -393,19 +364,27 @@ export class App extends React.Component<AppProps, AppState> {
       ({ policy }: { policy: string }) => policy === 'signed'
     );
 
+    const audioOnly =
+      'max_stored_resolution' in asset && asset.max_stored_resolution === 'Audio only'
+        ? true
+        : false;
+
     await this.props.sdk.field.setValue({
+      version: 2,
       uploadId: this.state.value.uploadId,
       assetId: this.state.value.assetId,
       playbackId: (publicPlayback && publicPlayback.id) || undefined,
       signedPlaybackId: (signedPlayback && signedPlayback.id) || undefined,
       ready: asset.status === 'ready',
       ratio: asset.aspect_ratio,
+      max_stored_resolution: asset.max_stored_resolution,
+      max_stored_frame_rate: asset.max_stored_frame_rate,
+      duration: asset.duration,
+      audioOnly: audioOnly,
       error: assetError,
     });
 
-    if (publicPlayback) {
-      this.setPublicPlayback(publicPlayback.id);
-    } else if (signedPlayback) {
+    if (signedPlayback) {
       this.setSignedPlayback(signedPlayback.id);
     }
 
@@ -459,11 +438,9 @@ export class App extends React.Component<AppProps, AppState> {
         );
       }
 
-      if (
-        this.state.value.ready &&
-        this.state.playbackUrl &&
-        this.state.posterUrl
-      ) {
+      const { muxDomain } = this.props.sdk.parameters.installation as InstallationParams;
+
+      if (this.state.value.ready && (this.state.value.playbackId || this.state.playbackToken)) {
         return (
           <div>
             {this.isUsingSigned() && (
@@ -478,11 +455,23 @@ export class App extends React.Component<AppProps, AppState> {
                 </TextLink>
               </Note>
             )}
-            <Player
-              playbackUrl={this.state.playbackUrl}
-              posterUrl={this.state.posterUrl}
-              ratio={this.state.value.ratio}
-              onReady={this.onPlayerReady}
+            <MuxPlayer
+              style={{ height: '100%', width: '100%' }}
+              playbackId={this.state.value.playbackId || this.state.value.signedPlaybackId}
+              streamType="on-demand"
+              poster={this.state.value.audioOnly ? '#' : undefined}
+              customDomain={muxDomain || undefined}
+              audio={this.state.value.audioOnly}
+              metadata={{
+                player_name: 'Contentful Admin Dashboard',
+                viewer_user_id: 'user' in this.props.sdk ? this.props.sdk.user.sys.id : undefined,
+                page_type: 'Preview Player',
+              }}
+              tokens={{
+                playback: this.isUsingSigned() ? this.state.playbackToken : undefined,
+                thumbnail: this.isUsingSigned() ? this.state.posterToken : undefined,
+                storyboard: this.isUsingSigned() ? this.state.storyboardToken : undefined,
+              }}
             />
             {this.state.value.assetId ? (
               <DeleteButton requestDeleteAsset={this.requestDeleteAsset} />
@@ -501,31 +490,20 @@ export class App extends React.Component<AppProps, AppState> {
               ? 'Uploading file to Mux...'
               : 'Upload complete! Waiting for created asset details...'}
           </Paragraph>
-          <div
-            className="progress"
-            style={{ width: `${this.state.uploadProgress}%` }}
-          />
+          <div className="progress" style={{ width: `${this.state.uploadProgress}%` }} />
         </div>
       );
     }
 
-    return (
-      <input type="file" className="cf-file-input" onChange={this.onChange} />
-    );
+    return <input type="file" className="cf-file-input" onChange={this.onChange} />;
   };
 }
 
 init((sdk) => {
   if (sdk.location.is(locations.LOCATION_APP_CONFIG)) {
-    render(
-      <Config sdk={sdk as AppExtensionSDK} />,
-      document.getElementById('root')
-    );
+    render(<Config sdk={sdk as AppExtensionSDK} />, document.getElementById('root'));
   } else {
-    render(
-      <App sdk={sdk as FieldExtensionSDK} />,
-      document.getElementById('root')
-    );
+    render(<App sdk={sdk as FieldExtensionSDK} />, document.getElementById('root'));
   }
 });
 

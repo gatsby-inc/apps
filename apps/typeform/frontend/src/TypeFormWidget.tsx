@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import * as typeformEmbed from '@typeform/embed';
-import { DialogExtensionSDK } from 'contentful-ui-extensions-sdk';
+import { DialogExtensionSDK } from '@contentful/app-sdk';
 import { Hash } from './typings';
 import { SDK_WINDOW_HEIGHT } from './constants';
 
@@ -16,17 +16,17 @@ export function TypeformPreviewWidget({ sdk }: Props) {
     typeformEmbed.makeWidget(element, value, {
       hideFooter: true,
       hideHeaders: true,
-      opacity: 0
+      opacity: 0,
     });
     sdk.window.updateHeight(SDK_WINDOW_HEIGHT);
-  }, [value]);
+  }, [value, sdk.window]);
 
   return (
     <div
       ref={el}
       style={{
         width: '100%',
-        height: SDK_WINDOW_HEIGHT
+        height: SDK_WINDOW_HEIGHT,
       }}
     />
   );

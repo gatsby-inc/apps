@@ -1,7 +1,6 @@
-service:
-  name: sls-apps-smartling
+service: sls-apps-smartling
 
-frameworkVersion: '>=1.0.0 <2.0.0'
+frameworkVersion: '>=2.0.0 <3.0.0'
 
 plugins:
   - serverless-domain-manager
@@ -19,19 +18,18 @@ custom:
 provider:
   name: aws
   runtime: nodejs12.x
-  stage: ${opt:stage, 'dev'}
+  stage: ${opt:stage, 'test'}
   region: 'us-east-1'
   deploymentBucket:
     name: cf-apps-serverless-deployment
   deploymentPrefix: sls-apps-smartling
 
 package:
-  include:
-    - built/**
-  exclude:
-    - .git/**
-    - "**/*.ts"
-    - node_modules/smartling-frontend/node_modules/**
+  patterns:
+    - 'built/**'
+    - '!.git/**'
+    - '!**/*.ts'
+    - '!node_modules/@contentful/smartling-frontend/node_modules/**'
 
 functions:
   app:

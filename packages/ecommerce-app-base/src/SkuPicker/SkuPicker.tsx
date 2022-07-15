@@ -2,19 +2,32 @@ import React, { Component } from 'react';
 import get from 'lodash/get';
 import clamp from 'lodash/clamp';
 import debounce from 'lodash/debounce';
-import { Button, TextInput, Icon } from '@contentful/forma-36-react-components';
-import { DialogExtensionSDK } from 'contentful-ui-extensions-sdk';
+import { DialogExtensionSDK } from '@contentful/app-sdk';
 import { ProductList } from './ProductList';
 import { Paginator } from './Paginator';
-import { Pagination, Product, ProductPreviewsFn, ProductsFn } from '../interfaces';
+import {
+  MakeSaveBtnTextFn,
+  Pagination,
+  Product,
+  ProductPreviewsFn,
+  ProductsFn,
+} from '../interfaces';
 import { ProductSelectionList } from './ProductSelectionList';
 import { styles } from './styles';
 import { mapSort } from '../utils';
+
+import { Button, Icon, TextInput } from '@contentful/f36-components';
+
+import { SearchIcon } from '@contentful/f36-icons';
 
 export interface Props {
   sdk: DialogExtensionSDK;
   fetchProductPreviews: ProductPreviewsFn;
   fetchProducts: ProductsFn;
+  searchDelay?: number;
+  skuType?: string;
+  makeSaveBtnText?: MakeSaveBtnTextFn;
+  hideSearch?: boolean;
 }
 
 interface State {
@@ -26,9 +39,9 @@ interface State {
   selectedSKUs: string[];
 }
 
-const SEARCH_DELAY = 250;
+const DEFAULT_SEARCH_DELAY = 250;
 
-function getSaveBtnText(selectedSKUs: string[]): string {
+function defaultGetSaveBtnText(selectedSKUs: string[]): string {
   switch (selectedSKUs.length) {
     case 0:
       return 'Save products';
@@ -47,22 +60,26 @@ export class SkuPicker extends Component<Props, State> {
       count: 0,
       limit: 0,
       offset: 0,
-      total: 0
+      total: 0,
     },
     products: [],
     selectedProducts: [],
-    selectedSKUs: get(this.props, ['sdk', 'parameters', 'invocation', 'fieldValue'], [])
+    selectedSKUs: get(this.props, ['sdk', 'parameters', 'invocation', 'fieldValue'], []),
   };
+
+  setSearchCallback: () => void;
+
+  constructor(props: Props) {
+    super(props);
+    this.setSearchCallback = debounce(() => {
+      this.setActivePage(1);
+    }, this.props.searchDelay || DEFAULT_SEARCH_DELAY);
+  }
 
   componentDidMount() {
     this.updateProducts();
     this.updateSelectedProducts();
   }
-
-  setSearchCallback = debounce(() => {
-    this.setActivePage(1);
-    this.updateProducts();
-  }, SEARCH_DELAY);
 
   setSearch = (search: string) => {
     this.setState({ search }, this.setSearchCallback);
@@ -73,11 +90,15 @@ export class SkuPicker extends Component<Props, State> {
       const {
         activePage,
         pagination: { limit },
-        search
+        search,
       } = this.state;
       const offset = (activePage - 1) * limit;
-      const { pagination, products } = await this.props.fetchProducts(search, { offset });
-      this.setState({ pagination, products });
+      const fetched = await this.props.fetchProducts(search, { offset });
+      // If the request has been cancelled because a new one has been launched
+      // then fetchProducts will return null
+      if (fetched && fetched.pagination && fetched.products) {
+        this.setState({ pagination: fetched.pagination, products: fetched.products });
+      }
     } catch (error) {
       this.props.sdk.notifier.error('There was an error fetching the product list.');
     }
@@ -86,8 +107,9 @@ export class SkuPicker extends Component<Props, State> {
   updateSelectedProducts = async () => {
     try {
       const { selectedSKUs } = this.state;
-      const config = this.props.sdk.parameters.installation;
-      const selectedProductsUnsorted = await this.props.fetchProductPreviews(selectedSKUs, config);
+      const { sdk, skuType, fetchProductPreviews } = this.props;
+      const config = sdk.parameters.installation;
+      const selectedProductsUnsorted = await fetchProductPreviews(selectedSKUs, config, skuType);
       const selectedProducts = mapSort(selectedProductsUnsorted, selectedSKUs, 'sku');
       this.setState({ selectedProducts });
     } catch (error) {
@@ -99,7 +121,7 @@ export class SkuPicker extends Component<Props, State> {
 
   loadMoreProducts = async () => {
     const { pagination, products } = await this.props.fetchProducts(this.state.search);
-    this.setState(oldState => ({ pagination, products: [...oldState.products, ...products] }));
+    this.setState((oldState) => ({ pagination, products: [...oldState.products, ...products] }));
   };
 
   setActivePage = (activePage: number) => {
@@ -117,14 +139,14 @@ export class SkuPicker extends Component<Props, State> {
     if (this.state.selectedSKUs.includes(sku)) {
       this.setState(
         ({ selectedSKUs }) => ({
-          selectedSKUs: selectedSKUs.filter(productSku => productSku !== sku)
+          selectedSKUs: selectedSKUs.filter((productSku) => productSku !== sku),
         }),
         () => this.updateSelectedProducts()
       );
     } else {
       this.setState(
         ({ selectedSKUs }) => ({
-          selectedSKUs: onlyOneProductCanBeSelected ? [sku] : [...selectedSKUs, sku]
+          selectedSKUs: onlyOneProductCanBeSelected ? [sku] : [...selectedSKUs, sku],
         }),
         () => this.updateSelectedProducts()
       );
@@ -133,6 +155,7 @@ export class SkuPicker extends Component<Props, State> {
 
   render() {
     const { search, pagination, products, selectedProducts, selectedSKUs } = this.state;
+    const { makeSaveBtnText = defaultGetSaveBtnText, skuType, hideSearch = false } = this.props;
     const infiniteScrollingPaginationMode = 'hasNextPage' in pagination;
     const pageCount = Math.ceil(pagination.total / pagination.limit);
 
@@ -140,17 +163,20 @@ export class SkuPicker extends Component<Props, State> {
       <>
         <header className={styles.header}>
           <div className={styles.leftsideControls}>
-            <TextInput
-              placeholder="Search for a product..."
-              type="search"
-              name="sku-search"
-              id="sku-search"
-              testId="sku-search"
-              width="medium"
-              value={search}
-              onChange={event => this.setSearch((event.target as HTMLInputElement).value)}
-            />
-            <Icon color="muted" icon="Search" />
+            {!hideSearch && (
+              <>
+                <TextInput
+                  placeholder="Search for a product..."
+                  type="search"
+                  name="sku-search"
+                  id="sku-search"
+                  testId="sku-search"
+                  value={search}
+                  onChange={(event) => this.setSearch((event.target as HTMLInputElement).value)}
+                />
+                <SearchIcon variant="muted" />
+              </>
+            )}
             {!!pagination.total && (
               <span className={styles.total}>
                 Total results: {pagination.total.toLocaleString()}
@@ -161,10 +187,11 @@ export class SkuPicker extends Component<Props, State> {
             <ProductSelectionList products={selectedProducts} selectProduct={this.selectProduct} />
             <Button
               className={styles.saveBtn}
-              buttonType="primary"
+              variant="primary"
               onClick={() => this.props.sdk.close(selectedSKUs)}
-              disabled={selectedSKUs.length === 0}>
-              {getSaveBtnText(selectedSKUs)}
+              isDisabled={selectedSKUs.length === 0}
+            >
+              {makeSaveBtnText(selectedSKUs, skuType)}
             </Button>
           </div>
         </header>
@@ -185,9 +212,11 @@ export class SkuPicker extends Component<Props, State> {
           {infiniteScrollingPaginationMode && pagination.hasNextPage && (
             <Button
               className={styles.loadMoreButton}
-              buttonType="naked"
+              variant="transparent"
               testId="infinite-scrolling-pagination"
-              onClick={this.loadMoreProducts}>
+              onClick={this.loadMoreProducts}
+              isFullWidth
+            >
               Load more
             </Button>
           )}

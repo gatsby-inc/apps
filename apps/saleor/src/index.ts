@@ -1,4 +1,4 @@
-import { DialogExtensionSDK, FieldExtensionSDK } from 'contentful-ui-extensions-sdk';
+import { DialogExtensionSDK, FieldExtensionSDK } from '@contentful/app-sdk';
 import { setup, renderSkuPicker } from '@contentful/ecommerce-app-base';
 import { dialogConfig, DIALOG_ID, SKUPickerConfig, strings } from './constants';
 
@@ -41,6 +41,7 @@ const renderDialog = async (sdk: DialogExtensionSDK) => {
 const openDialog = async (sdk: FieldExtensionSDK, currentValue: any, parameters: ClientConfig) => {
   const skus = await sdk.dialogs.openCurrentApp({
     title: makeCTA(sdk.field.type),
+    // @ts-expect-error Incompatible types
     parameters,
     ...dialogConfig,
   });

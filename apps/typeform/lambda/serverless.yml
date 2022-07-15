@@ -1,7 +1,6 @@
-service:
-  name: sls-apps-typeform
+service: sls-apps-typeform
 
-frameworkVersion: '>=1.0.0 <2.0.0'
+frameworkVersion: '>=2.0.0 <3.0.0'
 
 plugins:
   - serverless-domain-manager
@@ -18,16 +17,16 @@ custom:
 provider:
   name: aws
   runtime: nodejs12.x
-  stage: ${opt:stage, 'dev'}
+  stage: ${opt:stage, 'test'}
   region: 'us-east-1'
   deploymentBucket:
     name: cf-apps-serverless-deployment
   deploymentPrefix: sls-apps-typeform
 
 package:
-  exclude:
-    - .git/**
-    - node_modules/typeform-frontend/node_modules/**
+  patterns:
+    - '!.git/**'
+    - '!node_modules/@contentful/typeform-frontend/node_modules/**'
 
 functions:
   app:

@@ -1,7 +1,8 @@
 import React from 'react';
-import tokens from '@contentful/forma-36-tokens';
-import { Tooltip } from '@contentful/forma-36-react-components';
+import tokens from '@contentful/f36-tokens';
 import { css } from 'emotion';
+
+import { Tooltip } from '@contentful/f36-components';
 
 export interface Props {
   productCount: number;
@@ -10,10 +11,10 @@ export interface Props {
 const styles = {
   label: css({
     border: '1px solid',
-    borderColor: tokens.colorElementLight,
+    borderColor: tokens.gray200,
     borderRadius: '3px',
-    backgroundColor: tokens.colorElementMid,
-    color: tokens.colorTextMid,
+    backgroundColor: tokens.gray300,
+    color: tokens.gray700,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -27,20 +28,21 @@ const styles = {
     willChange: 'border-color',
 
     '&:hover': {
-      borderColor: tokens.colorElementDarkest,
-      cursor: 'pointer'
-    }
+      borderColor: tokens.gray500,
+      cursor: 'pointer',
+    },
   }),
   tooltip: css({
-    height: '40px'
-  })
+    height: '40px',
+  }),
 };
 
 export const OtherProductsCounter = (props: Props) => (
   <Tooltip
     targetWrapperClassName={styles.tooltip}
     content={`${props.productCount} more`}
-    place="bottom">
+    placement="bottom"
+  >
     <div className={styles.label}>
       <span>+{props.productCount}</span>
     </div>
